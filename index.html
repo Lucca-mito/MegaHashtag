@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+  <head>
+    <title></title>
+    <meta charset="utf-8">
+    <style>
+    </style>
+    <script src="socket.io/socket.io.js"></script>
+    <script src="jquery/dist/jquery.min.js"></script>
+    <script>
+    var socket = io();
+    socket.on('connect', (data) => {
+      socket.emit('eventFromClient', 'Hello from client!');
+    });
+
+    socket.on('eventFromServer', (data) => {
+      alert(data);
+    });
+    </script>
+  </head>
+  <body>
+  </body>
+</html>
