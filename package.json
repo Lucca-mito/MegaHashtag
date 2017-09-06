@@ -1,8 +1,9 @@
 {
-  "name": "",
+  "name": "MegaHashtag",
   "version": "0.0.1",
-  "description": "",
+  "description": "Recursive tic-tac-toe",
   "dependencies": {
+    "bootstrap": "^3.3.7",
     "express": "^4.10.2",
     "jquery": "^3.2.1",
     "socket.io": "^1.3.7"
