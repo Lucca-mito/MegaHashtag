@@ -11,17 +11,38 @@
     <script src="jquery/dist/jquery.min.js"></script>
     <script src="bootstrap/dist/js/bootstrap.min.js"></script>
     <script>
-    var socket = io();
+    const socket = io();
     socket.on('connect', (data) => {
       socket.emit('eventFromClient', 'Hello from client!');
     });
 
-    socket.on('eventFromServer', (data) => {
+    /*socket.on('eventFromServer', (data) => {
       alert(data);
+    });*/
+
+    function makeGrid(container) {
+      for (let i = 0; i < 3; i++) {
+        let row = $('<div class=row></div>');
+        for (let j = 0; j < 3; j++) {
+          let tile = $('<div/>');
+          tile.addClass('col-xs-4')
+          .addClass('tmb'[i] + '-' + 'lmr'[j])
+          .appendTo(row);
+        }
+        container.append(row);
+      }
+    }
+
+    $(document).ready(() => {
+      makeGrid($('.container'));
+      $('.container .row div').addClass('grid');
+
+      makeGrid($('.grid'));
+      $('.grid .row div').addClass('tile');
     });
     </script>
   </head>
   <body>
-
+    <div class="container"></div>
   </body>
 </html>
