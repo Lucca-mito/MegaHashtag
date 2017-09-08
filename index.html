@@ -24,8 +24,8 @@
       for (let i = 0; i < 3; i++) {
         let row = $('<div class=row></div>');
         for (let j = 0; j < 3; j++) {
-          let tile = $('<div/>');
-          tile.addClass('col-xs-4')
+          $('<div/>')
+          .addClass('col-xs-4')
           .addClass('tmb'[i] + '-' + 'lmr'[j])
           .appendTo(row);
         }
@@ -43,6 +43,6 @@
     </script>
   </head>
   <body>
-    <div class="container"></div>
+    <div class="container"/>
   </body>
 </html>
