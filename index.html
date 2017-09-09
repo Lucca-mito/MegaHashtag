@@ -6,43 +6,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css">
     <style>
+      .row div {
+        margin-bottom: 5px;
+      }
+
+      #socketID {
+        /*font-size: 16px;*/
+      }
+
+      .btn {
+        padding: 6px;
+        width: 135px;
+      }
     </style>
     <script src="socket.io/socket.io.js"></script>
     <script src="jquery/dist/jquery.min.js"></script>
     <script src="bootstrap/dist/js/bootstrap.min.js"></script>
     <script>
-    const socket = io();
-    socket.on('connect', (data) => {
-      socket.emit('eventFromClient', 'Hello from client!');
-    });
-
-    /*socket.on('eventFromServer', (data) => {
-      alert(data);
-    });*/
+    function copyToClipboard(text) {
+      var temp = $("<input>");
+      $("body").append(temp);
+      temp.val(text).select();
+      document.execCommand("copy");
+      temp.remove();
+    }
 
     function makeGrid(container) {
       for (let i = 0; i < 3; i++) {
-        let row = $('<div class=row></div>');
-        for (let j = 0; j < 3; j++) {
+        let row = $('<div class=row/>');
+
+        for (let j = 0; j < 3; j++)
           $('<div/>')
           .addClass('col-xs-4')
           .addClass('tmb'[i] + '-' + 'lmr'[j])
           .appendTo(row);
-        }
+
         container.append(row);
       }
     }
 
-    $(document).ready(() => {
+    function showGrid() {
+      $('.container').html('');
+
       makeGrid($('.container'));
       $('.container .row div').addClass('grid');
 
       makeGrid($('.grid'));
       $('.grid .row div').addClass('tile');
+    }
+
+    const socket = io();
+
+    socket.on('connect', (data) => {
+      $('#socketID').text(socket.id);
+      //$('#socketID').text('vtgGwGNnTRXwDFTxAAAK');
+    });
+
+    socket.on('clientsCount', (count) => {
+      $('#clientsCount').text(`${count} jogadores online`);
+    });
+
+    $(document).ready(() => {
+      $('#copy').click(() => {
+        copyToClipboard($('#socketID').text());
+      });
     });
     </script>
   </head>
   <body>
-    <div class="container"/>
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12"><h1>Mega #</h1></div>
+      </div>
+      <div class="row">
+        <div class="col-xs-7" id="socketID">Sua ID: carregando...</div>
+        <div class="col-xs-5">
+          <button class="btn btn-info" id="copy">Copiar sua ID</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-7">
+          <input type="text" class="form-control" placeholder="ID do seu oponente"/>
+        </div>
+        <div class="col-xs-5">
+          <button class="btn btn-success" id="challenge">Desafiar Jogador</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-7" id="clientsCount">Carregando...</div>
+        <div class="col-xs-5">
+          <button class="btn btn-warning" id="random">Oponente Aleatório</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

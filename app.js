@@ -10,13 +10,10 @@ app.get('/', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-  console.log('New client connected!');
-  socket.on('eventFromClient', (data) => {
-    console.log(data);
-    socket.emit('eventFromServer', 'Hello from server!');
-  });
+  socket.emit('clientsCount', io.engine.clientsCount)
 
-  socket.on('disconnect', function() {});
+  socket.on('disconnect', () => {
+  });
 });
 
 http.listen(3000, () => {
