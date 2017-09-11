@@ -12,6 +12,10 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
   socket.emit('clientsCount', io.engine.clientsCount)
 
+  socket.on('request all users', () => {
+    socket.emit('update all users', Object.keys(io.engine.clients));
+  });
+
   socket.on('disconnect', () => {
   });
 });

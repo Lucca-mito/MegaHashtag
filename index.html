@@ -5,13 +5,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="jquery-ui-dist/jquery-ui.min.css">
     <style>
       .row div {
         margin-bottom: 5px;
       }
 
       #socketID {
-        /*font-size: 16px;*/
+        text-align: center;
       }
 
       .btn {
@@ -22,15 +23,8 @@
     <script src="socket.io/socket.io.js"></script>
     <script src="jquery/dist/jquery.min.js"></script>
     <script src="bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="jquery-ui-dist/jquery-ui.min.js"></script>
     <script>
-    function copyToClipboard(text) {
-      var temp = $("<input>");
-      $("body").append(temp);
-      temp.val(text).select();
-      document.execCommand("copy");
-      temp.remove();
-    }
-
     function makeGrid(container) {
       for (let i = 0; i < 3; i++) {
         let row = $('<div class=row/>');
@@ -58,17 +52,22 @@
     const socket = io();
 
     socket.on('connect', (data) => {
-      $('#socketID').text(socket.id);
-      //$('#socketID').text('vtgGwGNnTRXwDFTxAAAK');
+      $('#socketID').text(`Sua ID: ${socket.id}`);
     });
 
     socket.on('clientsCount', (count) => {
       $('#clientsCount').text(`${count} jogadores online`);
     });
 
+    socket.on('update all users', (allUsers) => {
+      $('#challengeInput').autocomplete({
+        source: allUsers
+      });
+    });
+
     $(document).ready(() => {
-      $('#copy').click(() => {
-        copyToClipboard($('#socketID').text());
+      $('#challengeInput').focus(() => {
+        socket.emit('request all users');
       });
     });
     </script>
@@ -79,14 +78,11 @@
         <div class="col-xs-12"><h1>Mega #</h1></div>
       </div>
       <div class="row">
-        <div class="col-xs-7" id="socketID">Sua ID: carregando...</div>
-        <div class="col-xs-5">
-          <button class="btn btn-info" id="copy">Copiar sua ID</button>
-        </div>
+        <div class="col-xs-12" id="socketID">Sua ID: carregando...</div>
       </div>
       <div class="row">
         <div class="col-xs-7">
-          <input type="text" class="form-control" placeholder="ID do seu oponente"/>
+          <input type="text" class="form-control" placeholder="ID do seu oponente" id="challengeInput"/>
         </div>
         <div class="col-xs-5">
           <button class="btn btn-success" id="challenge">Desafiar Jogador</button>
