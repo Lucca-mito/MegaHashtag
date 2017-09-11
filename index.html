@@ -25,6 +25,16 @@
     <script src="bootstrap/dist/js/bootstrap.min.js"></script>
     <script src="jquery-ui-dist/jquery-ui.min.js"></script>
     <script>
+    // StackOverflow bullshit for highlighting autocomplete
+    $.ui.autocomplete.prototype._renderItem = function (ul, item) {
+      item.label = item.label.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + $.ui.autocomplete.escapeRegex(this.term) + ")(?![^<>]*>)(?![^&;]+;)", "gi"), "<strong>$1</strong>");
+      return $("<li></li>")
+      .data("item.autocomplete", item)
+      .append("<a>" + item.label + "</a>")
+      .appendTo(ul);
+    };
+    // End of StackOverflow bullshit
+
     function makeGrid(container) {
       for (let i = 0; i < 3; i++) {
         let row = $('<div class=row/>');
@@ -53,16 +63,12 @@
 
     socket.on('connect', (data) => {
       $('#socketID').text(`Sua ID: ${socket.id}`);
-    });
-
-    socket.on('clientsCount', (count) => {
-      $('#clientsCount').text(`${count} jogadores online`);
+      socket.emit('request all users');
     });
 
     socket.on('update all users', (allUsers) => {
-      $('#challengeInput').autocomplete({
-        source: allUsers
-      });
+      $('#challengeInput').autocomplete({source: allUsers});
+      $('#clientsCount').text(`${allUsers.length} jogadores online`);
     });
 
     $(document).ready(() => {
