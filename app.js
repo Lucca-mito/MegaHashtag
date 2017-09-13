@@ -14,10 +14,21 @@ io.on('connection', (socket) => {
     socket.emit('update all users', Object.keys(io.engine.clients));
   });
 
+  socket.on('challenge sent', (opponent) => {
+    socket.broadcast.to(opponent).emit('challenge received', socket.id);
+  });
+
+  socket.on('challenge accepted', (challenger) => {
+    const room = `${challenger} vs ${socket.id}`;
+    const challengerSocket = io.sockets.connected[challenger];
+    challengerSocket.emit('challenge accepted', socket.id);
+
+    challengerSocket.join(room);
+    socket.join(room);
+  })
+
   socket.on('disconnect', () => {
   });
 });
 
-http.listen(3000, () => {
-  console.log('listening on *:3000');
-});
+http.listen(3000, () => console.log('listening on *:3000'));

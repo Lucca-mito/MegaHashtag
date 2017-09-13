@@ -26,8 +26,9 @@
     <script src="jquery-ui-dist/jquery-ui.min.js"></script>
     <script>
     // StackOverflow bullshit for highlighting autocomplete
-    $.ui.autocomplete.prototype._renderItem = function (ul, item) {
-      item.label = item.label.replace(new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + $.ui.autocomplete.escapeRegex(this.term) + ")(?![^<>]*>)(?![^&;]+;)", "gi"), "<strong>$1</strong>");
+    $.ui.autocomplete.prototype._renderItem = function(ul, item) {
+      const exp = new RegExp("(?![^&;]+;)(?!<[^<>]*)(" + $.ui.autocomplete.escapeRegex(this.term) + ")(?![^<>]*>)(?![^&;]+;)", "gi");
+      item.label = item.label.replace(exp, "<strong>$1</strong>");
       return $("<li></li>")
       .data("item.autocomplete", item)
       .append("<a>" + item.label + "</a>")
@@ -59,6 +60,28 @@
       $('.grid .row div').addClass('tile');
     }
 
+    function showTurnTracker() {
+      $('.container').prepend(`
+        <div class=row>
+          <div class=col-xs-12 id=turnTracker/>
+        </div>
+      `);
+    }
+
+    function challenge(opponent) {
+      if (opponent == socket.id)
+        return alert('Escolha alguém além de você mesmo!');
+
+      socket.emit('challenge sent', opponent);
+      alert('Desafio enviado\nAguardando resposta...');
+    }
+
+    function startGame(opponent, isMyTurn) {
+      showGrid();
+      showTurnTracker();
+      $('.tile').text(1);
+    }
+
     const socket = io();
 
     socket.on('connect', (data) => {
@@ -67,13 +90,31 @@
     });
 
     socket.on('update all users', (allUsers) => {
-      $('#challengeInput').autocomplete({source: allUsers});
       $('#clientsCount').text(`${allUsers.length} jogadores online`);
+      allUsers.splice(allUsers.indexOf(socket.id), 1); // Remove user from the list
+      $('#challengeInput').autocomplete({source: allUsers});
+    });
+
+    socket.on('challenge received', (challenger) => {
+      const accepted = confirm(`Você foi desafiado por:\n${challenger}\nAceitar?`);
+      if (accepted) {
+        socket.emit('challenge accepted', challenger);
+        startGame(challenger, false);
+      }
+    });
+
+    socket.on('challenge accepted', (opponent) => {
+      alert(`${opponent} aceitou seu desafio.\nIniciando partida...`);
+      startGame(opponent, true);
     });
 
     $(document).ready(() => {
       $('#challengeInput').focus(() => {
         socket.emit('request all users');
+      });
+
+      $('#challenge').click(() => {
+        challenge($('#challengeInput').val());
       });
     });
     </script>
