@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="jquery-ui-dist/jquery-ui.min.css">
     <style>
       .row div {
-        margin-bottom: 5px;
+        margin-bottom: 5px; /* TODO: remove */
       }
 
       #socketID {
@@ -18,6 +18,11 @@
       .btn {
         padding: 6px;
         width: 135px;
+      }
+
+      .tile {
+        height: 40px;
+        border: 1px dashed;
       }
     </style>
     <script src="socket.io/socket.io.js"></script>
@@ -36,9 +41,36 @@
     };
     // End of StackOverflow bullshit
 
+    let myMark; // X or O. Yes, it's a fucking global variable. Long story.
+
+    function challenge(opponent) {
+      if (opponent == socket.id)
+        return alert('Escolha alguém além de você mesmo!');
+
+      socket.emit('challenge sent', opponent);
+      alert('Desafio enviado\nAguardando resposta...');
+    }
+
+    function getTile(gridCoords, tileCoords) {
+      return $(`.grid.${gridCoords} .${tileCoords}`);
+    }
+
+    function getTileCoords(tile) {
+      const exp = /(t|m|b)+-+(l|m|r)/;
+      const grid = tile.parents('.grid');
+
+      // Find [t/m/b]-[l/m/r] in the tile's classes
+      const tileCoords = tile.attr('class').match(exp)[0];
+
+      // Find [t/m/b]-[l/m/r] in the grid's classes
+      const gridCoords = grid.attr('class').match(exp)[0];
+
+      return gridCoords + ' ' + tileCoords;
+    }
+
     function makeGrid(container) {
       for (let i = 0; i < 3; i++) {
-        let row = $('<div class=row/>');
+        const row = $('<div class=row/>');
 
         for (let j = 0; j < 3; j++)
           $('<div/>')
@@ -68,44 +100,77 @@
       `);
     }
 
-    function challenge(opponent) {
-      if (opponent == socket.id)
-        return alert('Escolha alguém além de você mesmo!');
-
-      socket.emit('challenge sent', opponent);
-      alert('Desafio enviado\nAguardando resposta...');
+    function drawMark(tile, markToDraw) {
+      tile.addClass(markToDraw);
+      // draw the mark
     }
 
-    function startGame(opponent, isMyTurn) {
+    function tileOnClick() {
+      const tile = $(this);
+      drawMark(tile, myMark);
+      socket.emit('mark', getTileCoords(tile));
+      waitForOpponent();
+    }
+
+    function myTurn() {
+      $('#turnTracker').text('Sua vez');
+
+      const activeTiles = $('.tile'); // FIXME: only select tiles that should be
+
+      // Style the active tiles
+      activeTiles.css('background-color', 'red');
+
+      // Doesn't work with a callback, has to be a global funcion (tileOnClick)
+      activeTiles.click(tileOnClick);
+    }
+
+    function waitForOpponent() {
+      $('#turnTracker').text('Seu oponente está jogando...');
+      $('.tile').off().removeAttr('style'); // Deactivates all tiles
+    }
+
+    function startGame() {
       showGrid();
       showTurnTracker();
-      $('.tile').text(1);
+
+      if (myMark == 'X') myTurn();
+      else waitForOpponent();
     }
 
     const socket = io();
 
-    socket.on('connect', (data) => {
+    socket.on('connect', data => {
       $('#socketID').text(`Sua ID: ${socket.id}`);
       socket.emit('request all users');
     });
 
-    socket.on('update all users', (allUsers) => {
+    socket.on('update all users', allUsers => {
       $('#clientsCount').text(`${allUsers.length} jogadores online`);
       allUsers.splice(allUsers.indexOf(socket.id), 1); // Remove user from the list
       $('#challengeInput').autocomplete({source: allUsers});
     });
 
-    socket.on('challenge received', (challenger) => {
+    socket.on('challenge received', challenger => {
       const accepted = confirm(`Você foi desafiado por:\n${challenger}\nAceitar?`);
       if (accepted) {
         socket.emit('challenge accepted', challenger);
-        startGame(challenger, false);
+        myMark = 'O';
+        startGame();
       }
     });
 
-    socket.on('challenge accepted', (opponent) => {
+    socket.on('challenge accepted', opponent => {
       alert(`${opponent} aceitou seu desafio.\nIniciando partida...`);
-      startGame(opponent, true);
+      myMark = 'X';
+      startGame('X');
+    });
+
+    socket.on('my turn', opponentPlay => {
+      const opponentMark = myMark == 'X' ? 'O' : 'X';
+      const coords = opponentPlay.split(' ');
+      const tile = getTile(coords[0], coords[1]);
+      drawMark(tile, opponentMark);
+      myTurn();
     });
 
     $(document).ready(() => {

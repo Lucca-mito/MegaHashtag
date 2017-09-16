@@ -9,23 +9,27 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
-io.on('connection', (socket) => {
+io.on('connection', socket => {
   socket.on('request all users', () => {
     socket.emit('update all users', Object.keys(io.engine.clients));
   });
 
-  socket.on('challenge sent', (opponent) => {
+  socket.on('challenge sent', opponent => {
     socket.broadcast.to(opponent).emit('challenge received', socket.id);
   });
 
-  socket.on('challenge accepted', (challenger) => {
+  socket.on('challenge accepted', challenger => {
     const room = `${challenger} vs ${socket.id}`;
     const challengerSocket = io.sockets.connected[challenger];
     challengerSocket.emit('challenge accepted', socket.id);
 
     challengerSocket.join(room);
     socket.join(room);
-  })
+  });
+
+  socket.on('mark', play => {
+    
+  });
 
   socket.on('disconnect', () => {
   });
