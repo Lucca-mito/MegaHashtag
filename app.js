@@ -18,17 +18,18 @@ io.on('connection', socket => {
     socket.broadcast.to(opponent).emit('challenge received', socket.id);
   });
 
-  socket.on('challenge accepted', challenger => {
+  socket.on('challenge accepted', challengerID => {
     const room = `${challenger} vs ${socket.id}`;
-    const challengerSocket = io.sockets.connected[challenger];
-    challengerSocket.emit('challenge accepted', socket.id);
+    const challenger = io.sockets.connected[challengerID];
+    challenger.emit('challenge accepted', socket.id);
 
-    challengerSocket.join(room);
-    socket.join(room);
-  });
+    socket.on('mark', coords => {
+      challenger.emit('my turn', coords);
+    });
 
-  socket.on('mark', play => {
-    
+    challenger.on('mark', coords => {
+      socket.emit('my turn', coords);
+    });
   });
 
   socket.on('disconnect', () => {

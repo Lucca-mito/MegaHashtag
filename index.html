@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="jquery-ui-dist/jquery-ui.min.css">
     <style>
-      .row div {
+      .start-screen .row div {
         margin-bottom: 5px; /* TODO: remove */
       }
 
@@ -21,7 +21,7 @@
       }
 
       .tile {
-        height: 40px;
+        height: 42px;
         border: 1px dashed;
       }
     </style>
@@ -83,7 +83,7 @@
     }
 
     function showGrid() {
-      $('.container').html('');
+      $('.container').removeClass('start-screen').html('');
 
       makeGrid($('.container'));
       $('.container .row div').addClass('grid');
@@ -100,9 +100,10 @@
       `);
     }
 
-    function drawMark(tile, markToDraw) {
-      tile.addClass(markToDraw);
+    function drawMark(tile, mark) {
+      tile.addClass(mark);
       // draw the mark
+      tile.text(mark);
     }
 
     function tileOnClick() {
@@ -150,22 +151,23 @@
       $('#challengeInput').autocomplete({source: allUsers});
     });
 
-    socket.on('challenge received', challenger => {
-      const accepted = confirm(`Você foi desafiado por:\n${challenger}\nAceitar?`);
+    socket.on('challenge received', challengerID => {
+      const accepted = confirm(`Você foi desafiado por:\n${challengerID}\nAceitar?`);
       if (accepted) {
-        socket.emit('challenge accepted', challenger);
+        socket.emit('challenge accepted', challengerID);
         myMark = 'O';
         startGame();
       }
     });
 
-    socket.on('challenge accepted', opponent => {
-      alert(`${opponent} aceitou seu desafio.\nIniciando partida...`);
+    socket.on('challenge accepted', opponentID => {
+      alert(`${opponentID} aceitou seu desafio.\nIniciando partida...`);
       myMark = 'X';
-      startGame('X');
+      startGame();
     });
 
     socket.on('my turn', opponentPlay => {
+      console.log(opponentPlay);
       const opponentMark = myMark == 'X' ? 'O' : 'X';
       const coords = opponentPlay.split(' ');
       const tile = getTile(coords[0], coords[1]);
@@ -185,7 +187,7 @@
     </script>
   </head>
   <body>
-    <div class="container">
+    <div class="container start-screen">
       <div class="row">
         <div class="col-xs-12"><h1>Mega #</h1></div>
       </div>
