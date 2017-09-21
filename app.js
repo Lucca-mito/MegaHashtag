@@ -19,7 +19,6 @@ io.on('connection', socket => {
   });
 
   socket.on('challenge accepted', challengerID => {
-    const room = `${challenger} vs ${socket.id}`;
     const challenger = io.sockets.connected[challengerID];
     challenger.emit('challenge accepted', socket.id);
 
