@@ -31,9 +31,6 @@ io.on('connection', socket => {
       io.to(opponentID).emit('time out');
     });
   });
-
-  socket.on('disconnect', () => {
-  });
 });
 
 http.listen(3000, () => console.log('listening on *:3000'));

@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="timecircles/inc/TimeCircles.css">
     <style>
       .start-screen .row div {
-        margin-bottom: 5px; /* TODO: remove */
+        margin-bottom: 5px;
       }
 
       #socketID {
@@ -69,7 +69,7 @@
     }
 
     function getTile(gridCoords, tileCoords) {
-      return $(`.grid.${gridCoords} .${tileCoords}`);
+      return $(`.${gridCoords} .${tileCoords}`);
     }
 
     function getTileCoords(tile) {
@@ -140,6 +140,19 @@
       $('#timer > div').fadeIn('slow');
     }
 
+    function activateTiles(coords) {
+      let activeTiles;
+      if (!coords) activeTiles = $('.tile');
+      else {
+        activeTiles = $('.tile'); /*FIXME*/
+      }
+
+      // Style the active tiles
+      activeTiles.css('background-color', 'red');
+
+      activeTiles.click(tileOnClick);
+    }
+
     function drawMark(tile, mark) {
       tile.addClass(mark);
       // draw the mark
@@ -165,12 +178,7 @@
 
       timer = setTimeout(showTimer, 5000);
 
-      const activeTiles = $('.tile'); // FIXME: only select tiles that should be
-
-      // Style the active tiles
-      activeTiles.css('background-color', 'red');
-
-      activeTiles.click(tileOnClick);
+      activateTiles();
     }
 
     function waitForOpponent() {
@@ -223,7 +231,7 @@
       const coords = opponentPlay.split(' ');
       const tile = getTile(coords[0], coords[1]);
       drawMark(tile, opponentMark);
-      myTurn();
+      myTurn(coords);
     });
 
     socket.on('time out', () => {
