@@ -14,20 +14,21 @@ io.on('connection', socket => {
     socket.emit('update all users', Object.keys(io.engine.clients));
   });
 
-  socket.on('challenge sent', opponent => {
-    socket.broadcast.to(opponent).emit('challenge received', socket.id);
+  socket.on('challenge sent', opponentID => {
+    io.to(opponentID).emit('challenge received', socket.id);
   });
 
   socket.on('challenge accepted', challengerID => {
-    const challenger = io.sockets.connected[challengerID];
-    challenger.emit('challenge accepted', socket.id);
+    io.to(challengerID).emit('challenge accepted', socket.id);
+  });
 
+  socket.on('game start', opponentID => {
     socket.on('mark', coords => {
-      challenger.emit('my turn', coords);
+      io.to(opponentID).emit('my turn', coords);
     });
 
-    challenger.on('mark', coords => {
-      socket.emit('my turn', coords);
+    socket.on('time out', () => {
+      io.to(opponentID).emit('time out');
     });
   });
 

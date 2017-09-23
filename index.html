@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="jquery-ui-dist/jquery-ui.min.css">
+    <link rel="stylesheet" href="timecircles/inc/TimeCircles.css">
     <style>
       .start-screen .row div {
         margin-bottom: 5px; /* TODO: remove */
@@ -24,11 +25,27 @@
         height: 42px;
         border: 1px dashed;
       }
+
+      #turnTracker {
+        text-align: center;
+        height: 50px;
+        line-height: 75px;
+      }
+
+      #timer {
+        height: 50px;
+      }
+
+      #timer > div {
+        margin-left: -5px;
+        display: none;
+      }
     </style>
     <script src="socket.io/socket.io.js"></script>
     <script src="jquery/dist/jquery.min.js"></script>
     <script src="bootstrap/dist/js/bootstrap.min.js"></script>
     <script src="jquery-ui-dist/jquery-ui.min.js"></script>
+    <script src="timecircles/inc/TimeCircles.js"></script>
     <script>
     // StackOverflow bullshit for highlighting autocomplete
     $.ui.autocomplete.prototype._renderItem = function(ul, item) {
@@ -41,13 +58,13 @@
     };
     // End of StackOverflow bullshit
 
-    let myMark; // X or O. Yes, it's a fucking global variable. Long story.
+    let myMark, timer; // Yes, global variables. Long story.
 
-    function challenge(opponent) {
-      if (opponent == socket.id)
+    function challenge(opponentID) {
+      if (opponentID == socket.id)
         return alert('Escolha alguém além de você mesmo!');
 
-      socket.emit('challenge sent', opponent);
+      socket.emit('challenge sent', opponentID);
       alert('Desafio enviado\nAguardando resposta...');
     }
 
@@ -95,9 +112,32 @@
     function showTurnTracker() {
       $('.container').prepend(`
         <div class=row>
-          <div class=col-xs-12 id=turnTracker/>
+          <div class=col-xs-2/>
+          <div class=col-xs-8 id=turnTracker/>
+          <div class=col-xs-2 id=timer data-timer=30/>
         </div>
       `);
+    }
+
+    function showTimer() {
+      $('#timer').TimeCircles({
+        total_duration: 30,
+        animation: 'smooth',
+        circle_bg_color: "#60686F",
+        time: {
+          Days: {show: false},
+          Hours: {show: false},
+          Minutes: {show: false},
+          Seconds: {
+            text: "",
+            color: "#FF9999"
+          }
+        }
+      }).addListener((unit, value, total) => {
+        if (total == -1) onTimeOut();
+      });
+
+      $('#timer > div').fadeIn('slow');
     }
 
     function drawMark(tile, mark) {
@@ -107,27 +147,37 @@
     }
 
     function tileOnClick() {
+      clearTimeout(timer);
       const tile = $(this);
       drawMark(tile, myMark);
       socket.emit('mark', getTileCoords(tile));
       waitForOpponent();
     }
 
+    function onTimeOut() {
+      console.log('hey');
+      socket.emit('time out');
+      waitForOpponent();
+    };
+
     function myTurn() {
       $('#turnTracker').text('Sua vez');
+
+      timer = setTimeout(showTimer, 5000);
 
       const activeTiles = $('.tile'); // FIXME: only select tiles that should be
 
       // Style the active tiles
       activeTiles.css('background-color', 'red');
 
-      // Doesn't work with a callback, has to be a global funcion (tileOnClick)
       activeTiles.click(tileOnClick);
     }
 
     function waitForOpponent() {
       $('#turnTracker').text('Seu oponente está jogando...');
+      $('#timer').TimeCircles().destroy();
       $('.tile').off().removeAttr('style'); // Deactivates all tiles
+      // TODO: Dont use removeAttr because ill use jQuery to size the tiles
     }
 
     function startGame() {
@@ -155,6 +205,7 @@
       const accepted = confirm(`Você foi desafiado por:\n${challengerID}\nAceitar?`);
       if (accepted) {
         socket.emit('challenge accepted', challengerID);
+        socket.emit('game start', challengerID);
         myMark = 'O';
         startGame();
       }
@@ -162,16 +213,21 @@
 
     socket.on('challenge accepted', opponentID => {
       alert(`${opponentID} aceitou seu desafio.\nIniciando partida...`);
+      socket.emit('game start', opponentID);
       myMark = 'X';
       startGame();
     });
 
     socket.on('my turn', opponentPlay => {
-      console.log(opponentPlay);
       const opponentMark = myMark == 'X' ? 'O' : 'X';
       const coords = opponentPlay.split(' ');
       const tile = getTile(coords[0], coords[1]);
       drawMark(tile, opponentMark);
+      myTurn();
+    });
+
+    socket.on('time out', () => {
+      alert('Seu oponente demorou muito');
       myTurn();
     });
 
