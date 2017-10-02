@@ -8,22 +8,16 @@
     <link rel="stylesheet" href="jquery-ui-dist/jquery-ui.min.css">
     <link rel="stylesheet" href="timecircles/inc/TimeCircles.css">
     <style>
+      .container {
+        max-width: 400px;
+      }
+
       .start-screen .row div {
         margin-bottom: 5px;
       }
 
       #socketID {
         text-align: center;
-      }
-
-      .btn {
-        padding: 6px;
-        width: 135px;
-      }
-
-      .tile {
-        height: 42px;
-        border: 1px dashed;
       }
 
       #turnTracker {
@@ -40,6 +34,21 @@
         margin-left: -5px;
         display: none;
       }
+
+      .btn {
+        padding: 6px;
+        width: 135px;
+      }
+
+      .tile {
+        height: 42px;
+      }
+
+      .grid.t-l, .grid.t-m, .grid.t-r { border-bottom: 5px solid; }
+      .grid.b-l, .grid.b-m, .grid.b-r { border-top: 5px solid; }
+      .grid.t-l, .grid.m-l, .grid.b-l { border-right: 5px solid; }
+      .grid.t-r, .grid.m-r, .grid.b-r { border-left: 5px solid; }
+
     </style>
     <script src="socket.io/socket.io.js"></script>
     <script src="jquery/dist/jquery.min.js"></script>
@@ -59,6 +68,7 @@
     // End of StackOverflow bullshit
 
     let myMark, timer; // Yes, global variables. Long story.
+    const socket = io();
 
     function challenge(opponentID) {
       if (opponentID == socket.id)
@@ -99,7 +109,7 @@
       }
     }
 
-    function showGrid() {
+    function showGrid() { // TODO: size tiles with JQuery
       $('.container').removeClass('start-screen').html('');
 
       makeGrid($('.container'));
@@ -120,10 +130,10 @@
     }
 
     function showTimer() {
-      $('#timer').TimeCircles({
+      /*$('#timer').TimeCircles({
         total_duration: 30,
         animation: 'smooth',
-        circle_bg_color: "#60686F",
+        circle_bg_color: "#100686F",
         time: {
           Days: {show: false},
           Hours: {show: false},
@@ -137,20 +147,48 @@
         if (total == -1) onTimeOut();
       });
 
-      $('#timer > div').fadeIn('slow');
+      $('#timer > div').fadeIn('slow');*/
     }
 
-    function activateTiles(coords) {
-      let activeTiles;
-      if (!coords) activeTiles = $('.tile');
+    function colorGrids(grids) {
+      const colors = {
+        '.t-l': '#F00',
+        '.t-m': '#F80',
+        '.t-r': '#F08',
+        '.m-l': '#8F0',
+        '.m-m': '#0F0',
+        '.m-r': '#0F8',
+        '.b-l': '#80F',
+        '.b-m': '#08F',
+        '.b-r': '#00F'
+      };
+      for (let i in colors) {
+        grids.filter(i).find('.tile.active').css('background-color', colors[i]);
+      }
+    }
+
+    function activateTiles(gridCoords) {
+      let takenGrids = $('.grid.X, .grid.O, .grid.draw');
+      let activeGrids;
+
+      // If the player can play anywhere, all grids that aren't taken are active
+      if (!gridCoords) activeGrids = $('.grid').not(takenGrids);
+
       else {
-        activeTiles = $('.tile'); /*FIXME*/
+        let playingGrid = $(`.grid.${gridCoords}`);
+        if (playingGrid.is(takenGrids)) {
+          // If the grid is taken, the player can play anywhere
+          activateTiles();
+          return;
+        }
+        activeGrids = playingGrid; // If the grid isn't taken, activate it
       }
 
-      // Style the active tiles
-      activeTiles.css('background-color', 'red');
+      activeGrids.find('.tile').not('.X, .O')
+      .addClass('active')
+      .click(tileOnClick);
 
-      activeTiles.click(tileOnClick);
+      colorGrids(activeGrids);
     }
 
     function drawMark(tile, mark) {
@@ -168,24 +206,22 @@
     }
 
     function onTimeOut() {
-      console.log('hey');
       socket.emit('time out');
       waitForOpponent();
     };
 
-    function myTurn() {
+    function myTurn(coords) {
       $('#turnTracker').text('Sua vez');
-
       timer = setTimeout(showTimer, 5000);
-
-      activateTiles();
+      activateTiles(coords);
     }
 
     function waitForOpponent() {
       $('#turnTracker').text('Seu oponente está jogando...');
-      $('#timer').TimeCircles().destroy();
-      $('.tile').off().removeAttr('style'); // Deactivates all tiles
-      // TODO: Dont use removeAttr because ill use jQuery to size the tiles
+      $('#timer').TimeCircles().destroy(); // Hide the timer
+
+      $('.tile').removeClass('active').off() // Deactivate all tiles
+      .css('background-color', 'white'); // ...and remove their backgrounds
     }
 
     function startGame() {
@@ -195,8 +231,6 @@
       if (myMark == 'X') myTurn();
       else waitForOpponent();
     }
-
-    const socket = io();
 
     socket.on('connect', data => {
       $('#socketID').text(`Sua ID: ${socket.id}`);
@@ -228,10 +262,10 @@
 
     socket.on('my turn', opponentPlay => {
       const opponentMark = myMark == 'X' ? 'O' : 'X';
-      const coords = opponentPlay.split(' ');
-      const tile = getTile(coords[0], coords[1]);
+      const [gridCoords, tileCoords] = opponentPlay.split(' ');
+      const tile = getTile(gridCoords, tileCoords);
       drawMark(tile, opponentMark);
-      myTurn(coords);
+      myTurn(tileCoords);
     });
 
     socket.on('time out', () => {
