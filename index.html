@@ -59,9 +59,19 @@
         height: 42px;
       }
 
+      .tile.X {
+        background-image: url('http://jimdscott.com/static/images/tic-tac-toe-X.png');
+        background-size: cover;
+      }
+
+      .tile.O {
+        background-image: url('http://jimdscott.com/static/images/tic-tac-toe-O.png');
+        background-size: cover;
+      }
+
       @media only screen and (min-width: 760px) {
-        /* Obviously, :hover doesn't work on mobile */
-        .tile:hover {
+        /* Obviously, :hover doesn't work correctly on mobile */
+        .active.grid .tile:hover:not(.X):not(.O) { /* Active tiles */
           border: 3px dashed;
         }
       }
@@ -184,12 +194,6 @@
       .click(tileOnClick); // Make the tiles respond to clicks
     }
 
-    function drawMark(tile, mark) {
-      tile.addClass(mark);
-      // draw the mark
-      tile.text(mark);
-    }
-
     function checkCompletion(element, mark) {
       let children;
       if (element.is('.grid')) children = element.find('.tile'); // Check if a grid is complete
@@ -233,7 +237,7 @@
 
       clearTimeout(timer);
 
-      drawMark(tile, myMark);
+      tile.addClass(myMark);
       socket.emit('mark', getTileCoords(tile));
 
       const grid = tile.parents('.grid');
@@ -308,8 +312,8 @@
       const tile = getTile(gridCoords, tileCoords);
       const grid = tile.parents('.grid');
 
-      drawMark(tile, opponentMark);
-      
+      tile.addClass(opponentMark);
+
       if (checkCompletion(grid, opponentMark))
         conquerGrid(grid, opponentMark);
 
