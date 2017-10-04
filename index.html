@@ -39,28 +39,31 @@
         padding: 6px;
         width: 135px;
       }
-      
-      .grid.active.t-l { background-color: #F00; }
-      .grid.active.t-m { background-color: #F80; }
-      .grid.active.t-r { background-color: #F08; }
-      .grid.active.m-l { background-color: #8F0; }
-      .grid.active.m-m { background-color: #0F0; }
-      .grid.active.m-r { background-color: #0F8; }
-      .grid.active.b-l { background-color: #80F; }
-      .grid.active.b-m { background-color: #08F; }
-      .grid.active.b-r { background-color: #00F; }
-      
-      .grid.t-l, .grid.t-m, .grid.t-r { border-bottom: 5px solid; }
-      .grid.b-l, .grid.b-m, .grid.b-r { border-top: 5px solid; }
+
+      .active.grid.t-l { background-color: #F00; }
+      .active.grid.t-c { background-color: #F80; }
+      .active.grid.t-r { background-color: #F08; }
+      .active.grid.m-l { background-color: #8F0; }
+      .active.grid.m-c { background-color: #0F0; }
+      .active.grid.m-r { background-color: #0F8; }
+      .active.grid.b-l { background-color: #80F; }
+      .active.grid.b-c { background-color: #08F; }
+      .active.grid.b-r { background-color: #00F; }
+
+      .grid.t-l, .grid.t-c, .grid.t-r { border-bottom: 5px solid; }
+      .grid.b-l, .grid.b-c, .grid.b-r { border-top: 5px solid; }
       .grid.t-l, .grid.m-l, .grid.b-l { border-right: 5px solid; }
       .grid.t-r, .grid.m-r, .grid.b-r { border-left: 5px solid; }
 
       .tile {
         height: 42px;
       }
-      
-      .tile:hover {
-        border: 3px dashed;
+
+      @media only screen and (min-width: 760px) {
+        /* Obviously, :hover doesn't work on mobile */
+        .tile:hover {
+          border: 3px dashed;
+        }
       }
 
     </style>
@@ -97,7 +100,7 @@
     }
 
     function getTileCoords(tile) {
-      const exp = /(t|m|b)+-+(l|m|r)/;
+      const exp = /(t|m|b)+-+(l|c|r)/;
       const grid = tile.parents('.grid');
 
       // Find [t/m/b]-[l/m/r] in the tile's classes
@@ -116,7 +119,7 @@
         for (let j = 0; j < 3; j++)
           $('<div/>')
           .addClass('col-xs-4')
-          .addClass('tmb'[i] + '-' + 'lmr'[j])
+          .addClass('tmb'[i] + '-' + 'lcr'[j])
           .appendTo(row);
 
         container.append(row);
@@ -164,27 +167,21 @@
       $('#timer > div').fadeIn('slow');*/
     }
 
-    function activateTiles(gridCoords) {
-      let takenGrids = $('.grid.X, .grid.O, .grid.draw');
-      let activeGrids;
+    function activateGrids(grids) {
+      const takenGrids = $('.grid.X, .grid.O, .grid.draw');
 
-      // If the player can play anywhere, all grids that aren't taken are active
-      if (!gridCoords) activeGrids = $('.grid').not(takenGrids);
+      // If the player can play anywhere (grids is undefined), all grids that aren't taken are active
+      if (!grids) grids = $('.grid').not(takenGrids);
 
-      else {
-        let playingGrid = $(`.grid.${gridCoords}`);
-        if (playingGrid.is(takenGrids)) {
-          // If the grid is taken, the player can play anywhere
-          activateTiles();
-          return;
-        }
-        activeGrids = playingGrid; // If the grid isn't taken, activate it
+      // If the grid is taken, the player can play anywhere
+      if (grids.is(takenGrids)) {
+        activateGrids();
+        return;
       }
 
-      activeGrids.addClass('active') // Add 'active' class to the grids
+      grids.addClass('active') // Add 'active' class to the grids
       .find('.tile').not('.X, .O')
-      .addClass('active') // ...and to the tiles as well
-      .click(tileOnClick);
+      .click(tileOnClick); // Make the tiles respond to clicks
     }
 
     function drawMark(tile, mark) {
@@ -193,30 +190,78 @@
       tile.text(mark);
     }
 
+    function checkCompletion(element, mark) {
+      let children;
+      if (element.is('.grid')) children = element.find('.tile'); // Check if a grid is complete
+      else children = element.find('.grid'); // Check if the board (.container) is complete
+
+      const m = [[], [], []]; // 3x3 boolean matrix; determines if there is "mark" at coords i, j
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const coords = 'tmb'[i] + '-' + 'lcr'[j];
+          m[i][j] = children.filter('.'+coords).hasClass(mark);
+        }
+      }
+
+      const [
+        [topLeft,    topCenter,    topRight],
+        [middleLeft, middleCenter, middleRight],
+        [bottomLeft, bottomCenter, bottomRight]
+      ] = m;
+
+      return (
+        // Horizontal
+        (topLeft && topCenter && topRight) ||
+        (middleLeft && middleCenter && middleRight) ||
+        (bottomLeft && bottomCenter && bottomRight) ||
+        // Vertical
+        (topLeft && middleLeft && bottomLeft) ||
+        (topCenter && middleCenter && bottomCenter) ||
+        (topRight && middleRight && bottomRight) ||
+        // Diagonal
+        (topLeft && middleCenter && bottomRight) ||
+        (topRight && middleCenter && bottomLeft)
+      );
+    }
+
+    function conquerGrid(grid, mark) {
+      grid.addClass(mark);
+    }
+
     function tileOnClick() {
-      clearTimeout(timer);
       const tile = $(this);
+
+      clearTimeout(timer);
+
       drawMark(tile, myMark);
       socket.emit('mark', getTileCoords(tile));
-      waitForOpponent();
+
+      const grid = tile.parents('.grid');
+
+      if (checkCompletion(grid, myMark)) conquerGrid(grid, myMark);
+
+      if (checkCompletion($('.container'), myMark)) alert('You won');
+      else waitForOpponent();
     }
 
     function onTimeOut() {
       socket.emit('time out');
       waitForOpponent();
-    };
+    }
 
-    function myTurn(coords) {
+    function myTurn(tileCoords) {
       $('#turnTracker').text('Sua vez');
       timer = setTimeout(showTimer, 5000);
-      activateTiles(coords);
+
+      if (tileCoords) activateGrids($(`.grid.${tileCoords}`));
+      else activateGrids();
     }
 
     function waitForOpponent() {
       $('#turnTracker').text('Seu oponente está jogando...');
       $('#timer').TimeCircles().destroy(); // Hide the timer
-      
-      $('.tile, .grid').removeClass('active');
+
+      $('.grid').removeClass('active');
       $('.tile').off();
     }
 
@@ -259,9 +304,18 @@
     socket.on('my turn', opponentPlay => {
       const opponentMark = myMark == 'X' ? 'O' : 'X';
       const [gridCoords, tileCoords] = opponentPlay.split(' ');
+
       const tile = getTile(gridCoords, tileCoords);
+      const grid = tile.parents('.grid');
+
       drawMark(tile, opponentMark);
-      myTurn(tileCoords);
+      
+      if (checkCompletion(grid, opponentMark))
+        conquerGrid(grid, opponentMark);
+
+      if (checkCompletion($('.container'), opponentMark))
+        alert('Opponent won!');
+      else myTurn(tileCoords);
     });
 
     socket.on('time out', () => {
