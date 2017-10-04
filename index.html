@@ -39,15 +39,29 @@
         padding: 6px;
         width: 135px;
       }
-
-      .tile {
-        height: 42px;
-      }
-
+      
+      .grid.active.t-l { background-color: #F00; }
+      .grid.active.t-m { background-color: #F80; }
+      .grid.active.t-r { background-color: #F08; }
+      .grid.active.m-l { background-color: #8F0; }
+      .grid.active.m-m { background-color: #0F0; }
+      .grid.active.m-r { background-color: #0F8; }
+      .grid.active.b-l { background-color: #80F; }
+      .grid.active.b-m { background-color: #08F; }
+      .grid.active.b-r { background-color: #00F; }
+      
       .grid.t-l, .grid.t-m, .grid.t-r { border-bottom: 5px solid; }
       .grid.b-l, .grid.b-m, .grid.b-r { border-top: 5px solid; }
       .grid.t-l, .grid.m-l, .grid.b-l { border-right: 5px solid; }
       .grid.t-r, .grid.m-r, .grid.b-r { border-left: 5px solid; }
+
+      .tile {
+        height: 42px;
+      }
+      
+      .tile:hover {
+        border: 3px dashed;
+      }
 
     </style>
     <script src="socket.io/socket.io.js"></script>
@@ -150,23 +164,6 @@
       $('#timer > div').fadeIn('slow');*/
     }
 
-    function colorGrids(grids) {
-      const colors = {
-        '.t-l': '#F00',
-        '.t-m': '#F80',
-        '.t-r': '#F08',
-        '.m-l': '#8F0',
-        '.m-m': '#0F0',
-        '.m-r': '#0F8',
-        '.b-l': '#80F',
-        '.b-m': '#08F',
-        '.b-r': '#00F'
-      };
-      for (let i in colors) {
-        grids.filter(i).find('.tile.active').css('background-color', colors[i]);
-      }
-    }
-
     function activateTiles(gridCoords) {
       let takenGrids = $('.grid.X, .grid.O, .grid.draw');
       let activeGrids;
@@ -184,11 +181,10 @@
         activeGrids = playingGrid; // If the grid isn't taken, activate it
       }
 
-      activeGrids.find('.tile').not('.X, .O')
-      .addClass('active')
+      activeGrids.addClass('active') // Add 'active' class to the grids
+      .find('.tile').not('.X, .O')
+      .addClass('active') // ...and to the tiles as well
       .click(tileOnClick);
-
-      colorGrids(activeGrids);
     }
 
     function drawMark(tile, mark) {
@@ -219,9 +215,9 @@
     function waitForOpponent() {
       $('#turnTracker').text('Seu oponente está jogando...');
       $('#timer').TimeCircles().destroy(); // Hide the timer
-
-      $('.tile').removeClass('active').off() // Deactivate all tiles
-      .css('background-color', 'white'); // ...and remove their backgrounds
+      
+      $('.tile, .grid').removeClass('active');
+      $('.tile').off();
     }
 
     function startGame() {
