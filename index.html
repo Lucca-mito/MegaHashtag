@@ -113,7 +113,8 @@
       allUsers.splice(allUsers.indexOf(socket.id), 1); // Remove user from the list
       $('#challengeInput').autocomplete({source: allUsers});
 
-      $('#random').click(() => {
+      $('#random').off() // Every time allUsers is updated, we need to erase the old onClick event
+      .click(() => {
         const rand = Math.floor(Math.random() * allUsers.length);
         challenge(allUsers[rand]);
       });
@@ -273,7 +274,7 @@
       clearTimeout(timer);
 
       const tile = $(this);
-      
+
       tile.addClass(myMark);
       socket.emit('mark', getTileCoords(tile));
 
@@ -312,9 +313,8 @@
       else waitForOpponent();
     }
 
-    socket.on('connect', data => {
+    socket.on('connect', () => {
       $('#socketID').text(`Sua ID: ${socket.id}`);
-      socket.emit('request all users');
     });
 
     socket.on('update all users', allUsers => {
@@ -357,10 +357,6 @@
     });
 
     $(document).ready(() => {
-      $('#challengeInput').focus(() => {
-        socket.emit('request all users');
-      });
-
       $('#challenge').click(() => {
         challenge($('#challengeInput').val());
       });
