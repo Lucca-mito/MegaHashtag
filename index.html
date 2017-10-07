@@ -48,6 +48,10 @@
         margin-left: 5px;
       }
 
+      #back {
+        margin: 10px -10px;
+      }
+
       .active.t-l { background-color: #F00; }
       .active.t-c { background-color: #F80; }
       .active.t-r { background-color: #F08; }
@@ -69,6 +73,7 @@
 
       .X, .O, .draw {
         background-size: contain;
+        background-repeat: no-repeat;
       }
 
       .X .tile, .O .tile, .draw .tile {
@@ -209,6 +214,19 @@
       $('#timer > div').fadeIn('slow');
     }
 
+    function showBackButton() {
+      $('.container').append(`
+        <div class=row>
+          <div class=col-xs-2>
+            <button onclick="location.reload()" class="btn btn-default" id=back>
+              ↩︎ Voltar
+            </button>
+          </div>
+          <div class=col-xs-10/>
+        </div>
+      `);
+    }
+
     function activateGrids(grids) {
       const takenGrids = $('.grid.X, .grid.O, .grid.draw');
 
@@ -320,8 +338,6 @@
 
       if (myMark == 'X') myTurn();
       else waitForOpponent();
-
-      // $('.grid').addClass('X');
     }
 
     function endGame(amWinner) {
@@ -338,6 +354,8 @@
       .text(rematchText)
       .appendTo('#turnTracker')
       .click(() => challenge(opponent.id));
+
+      showBackButton();
     }
 
     socket.on('connect', () => {
