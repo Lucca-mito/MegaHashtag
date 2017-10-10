@@ -8,6 +8,10 @@
     <link rel="stylesheet" href="jquery-ui-dist/jquery-ui.min.css">
     <link rel="stylesheet" href="timecircles/inc/TimeCircles.css">
     <style>
+      .container {
+        max-width: 400px;
+      }
+
       .start-screen .row div {
         margin-bottom: 5px;
       }
@@ -16,20 +20,16 @@
         text-align: center;
       }
 
-      .btn {
+      #challenge, #random {
         padding: 6px;
         width: 135px;
-      }
-
-      .tile {
-        height: 42px;
-        border: 1px dashed;
       }
 
       #turnTracker {
         text-align: center;
         height: 50px;
         line-height: 75px;
+        margin-bottom: 5px;
       }
 
       #timer {
@@ -37,9 +37,68 @@
       }
 
       #timer > div {
-        margin-left: -5px;
         display: none;
+        position: relative;
+        right: 5px;
+        top: 3px;
       }
+
+      #rematch {
+        padding: 2px 6px;
+        margin-left: 5px;
+      }
+
+      #back {
+        margin: 10px -10px;
+      }
+
+      .active.t-l { background-color: #F00; }
+      .active.t-c { background-color: #F80; }
+      .active.t-r { background-color: #F08; }
+      .active.m-l { background-color: #8F0; }
+      .active.m-c { background-color: #0F0; }
+      .active.m-r { background-color: #0F8; }
+      .active.b-l { background-color: #80F; }
+      .active.b-c { background-color: #08F; }
+      .active.b-r { background-color: #00F; }
+
+      .grid.t-l, .grid.t-c, .grid.t-r { border-bottom: 5px solid; }
+      .grid.b-l, .grid.b-c, .grid.b-r { border-top: 5px solid; }
+      .grid.t-l, .grid.m-l, .grid.b-l { border-right: 5px solid; }
+      .grid.t-r, .grid.m-r, .grid.b-r { border-left: 5px solid; }
+
+      .tile {
+        height: 42px;
+      }
+
+      .X, .O, .draw {
+        background-size: contain;
+        background-repeat: no-repeat;
+      }
+
+      .X .tile, .O .tile, .draw .tile {
+        background-image: none;
+      }
+
+      .X {
+        background-image: url('http://jimdscott.com/static/images/tic-tac-toe-X.png');
+      }
+
+      .O {
+        background-image: url('http://jimdscott.com/static/images/tic-tac-toe-O.png');
+      }
+
+      .draw {
+        background-image: url('https://emojipedia-us.s3.amazonaws.com/thumbs/320/google/6/older-woman_1f475.png');
+      }
+
+      @media only screen and (min-width: 760px) {
+        /* Obviously, :hover doesn't work correctly on mobile */
+        .active.grid .tile:hover:not(.X):not(.O) { /* Active tiles */
+          border: 3px dashed;
+        }
+      }
+
     </style>
     <script src="socket.io/socket.io.js"></script>
     <script src="jquery/dist/jquery.min.js"></script>
@@ -59,13 +118,28 @@
     // End of StackOverflow bullshit
 
     let myMark, timer; // Yes, global variables. Long story.
+    const opponent = {};
+    const socket = io();
+
+    function updateAllUsers(allUsers) {
+      $('#clientsCount').text(`${allUsers.length} jogadores online`);
+
+      allUsers.splice(allUsers.indexOf(socket.id), 1); // Remove user from the list
+      $('#challengeInput').autocomplete({source: allUsers});
+
+      $('#random').off() // Every time allUsers is updated, we need to erase the old onClick event
+      .click(() => {
+        const rand = Math.floor(Math.random() * allUsers.length);
+        challenge(allUsers[rand]);
+      });
+    }
 
     function challenge(opponentID) {
       if (opponentID == socket.id)
         return alert('Escolha alguém além de você mesmo!');
 
       socket.emit('challenge sent', opponentID);
-      alert('Desafio enviado\nAguardando resposta...');
+      alert(`Desafio enviado para ${opponentID}\nAguardando resposta...`);
     }
 
     function getTile(gridCoords, tileCoords) {
@@ -73,7 +147,7 @@
     }
 
     function getTileCoords(tile) {
-      const exp = /(t|m|b)+-+(l|m|r)/;
+      const exp = /(t|m|b)+-+(l|c|r)/;
       const grid = tile.parents('.grid');
 
       // Find [t/m/b]-[l/m/r] in the tile's classes
@@ -92,7 +166,7 @@
         for (let j = 0; j < 3; j++)
           $('<div/>')
           .addClass('col-xs-4')
-          .addClass('tmb'[i] + '-' + 'lmr'[j])
+          .addClass('tmb'[i] + '-' + 'lcr'[j])
           .appendTo(row);
 
         container.append(row);
@@ -140,52 +214,122 @@
       $('#timer > div').fadeIn('slow');
     }
 
-    function activateTiles(coords) {
-      let activeTiles;
-      if (!coords) activeTiles = $('.tile');
-      else {
-        activeTiles = $('.tile'); /*FIXME*/
-      }
-
-      // Style the active tiles
-      activeTiles.css('background-color', 'red');
-
-      activeTiles.click(tileOnClick);
+    function showBackButton() {
+      $('.container').append(`
+        <div class=row>
+          <div class=col-xs-2>
+            <button onclick="location.reload()" class="btn btn-default" id=back>
+              ↩︎ Voltar
+            </button>
+          </div>
+          <div class=col-xs-10/>
+        </div>
+      `);
     }
 
-    function drawMark(tile, mark) {
-      tile.addClass(mark);
-      // draw the mark
-      tile.text(mark);
+    function activateGrids(grids) {
+      const takenGrids = $('.grid.X, .grid.O, .grid.draw');
+
+      // If the player can play anywhere (grids is undefined), all grids that aren't taken are active
+      if (!grids) grids = $('.grid').not(takenGrids);
+
+      // If the grid is taken, the player can play anywhere
+      if (grids.is(takenGrids)) {
+        activateGrids();
+        return;
+      }
+
+      grids.addClass('active') // Add 'active' class to the grids
+      .find('.tile').not('.X, .O')
+      .click(tileOnClick); // Make the tiles respond to clicks
+    }
+
+    function winGrid(grid, mark) {
+      grid.addClass(mark);
+    }
+
+    function checkWin(element, mark) {
+      let children;
+      if (element.is('.grid')) children = element.find('.tile'); // Check if a grid has been won
+      else children = element.find('.grid'); // Check if the game has been won
+
+      const m = [[], [], []]; // 3x3 boolean matrix; determines if there is "mark" at coords i, j
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+          const coords = 'tmb'[i] + '-' + 'lcr'[j];
+          m[i][j] = children.filter('.'+coords).hasClass(mark);
+        }
+      }
+
+      const [
+        [topLeft,    topCenter,    topRight],
+        [middleLeft, middleCenter, middleRight],
+        [bottomLeft, bottomCenter, bottomRight]
+      ] = m;
+
+      return (
+        // Horizontal
+        (topLeft && topCenter && topRight) ||
+        (middleLeft && middleCenter && middleRight) ||
+        (bottomLeft && bottomCenter && bottomRight) ||
+        // Vertical
+        (topLeft && middleLeft && bottomLeft) ||
+        (topCenter && middleCenter && bottomCenter) ||
+        (topRight && middleRight && bottomRight) ||
+        // Diagonal
+        (topLeft && middleCenter && bottomRight) ||
+        (topRight && middleCenter && bottomLeft)
+      );
+    }
+
+    function checkDraw(element) {
+      let children;
+      if (element.is('.grid')) children = element.find('.tile'); // Check if a grid is a draw
+      else children = element.find('.grid'); // Check if the game is a draw
+
+      return children.filter('.X, .O').length == 9; // Element has 9 marked tiles/grids
+    }
+
+    function checkGrid(grid) { // Checks if grid has been won and if it's a draw
+      for (let mark of ['X', 'O'])
+        if (checkWin(grid, mark)) winGrid(grid, mark);
+
+      checkDraw(grid);
     }
 
     function tileOnClick() {
       clearTimeout(timer);
+
       const tile = $(this);
-      drawMark(tile, myMark);
+
+      tile.addClass(myMark);
       socket.emit('mark', getTileCoords(tile));
-      waitForOpponent();
+
+      checkGrid(tile.parents('.grid'));
+
+      if (checkWin($('.container'), myMark)) endGame(true);
+      else waitForOpponent();
     }
 
     function onTimeOut() {
-      console.log('hey');
       socket.emit('time out');
       waitForOpponent();
-    };
+    }
 
-    function myTurn() {
+    function myTurn(tileCoords) {
       $('#turnTracker').text('Sua vez');
-
       timer = setTimeout(showTimer, 5000);
 
-      activateTiles();
+      if (tileCoords) activateGrids($(`.grid.${tileCoords}`));
+      else activateGrids();
     }
 
     function waitForOpponent() {
       $('#turnTracker').text('Seu oponente está jogando...');
-      $('#timer').TimeCircles().destroy();
-      $('.tile').off().removeAttr('style'); // Deactivates all tiles
-      // TODO: Dont use removeAttr because ill use jQuery to size the tiles
+      $('#timer').TimeCircles().destroy(); // Hide the timer
+
+      $('.grid').removeClass('active');
+      $('.tile').off();
     }
 
     function startGame() {
@@ -196,17 +340,30 @@
       else waitForOpponent();
     }
 
-    const socket = io();
+    function endGame(amWinner) {
+      waitForOpponent(); // We don't really want to waitForOpponent(), this is just a clean/lazy way of clearing everything
 
-    socket.on('connect', data => {
+      const endGameText = amWinner? 'Você ganhou!' : 'Você perdeu...';
+      const rematchText = amWinner? 'Mais uma?'    : 'Revanche?';
+
+      $('#turnTracker').text(endGameText);
+
+      $('<button id=rematch/>')
+      .addClass('btn')
+      .addClass(amWinner? 'btn-primary' : 'btn-danger')
+      .text(rematchText)
+      .appendTo('#turnTracker')
+      .click(() => challenge(opponent.id));
+
+      showBackButton();
+    }
+
+    socket.on('connect', () => {
       $('#socketID').text(`Sua ID: ${socket.id}`);
-      socket.emit('request all users');
     });
 
     socket.on('update all users', allUsers => {
-      $('#clientsCount').text(`${allUsers.length} jogadores online`);
-      allUsers.splice(allUsers.indexOf(socket.id), 1); // Remove user from the list
-      $('#challengeInput').autocomplete({source: allUsers});
+      updateAllUsers(allUsers);
     });
 
     socket.on('challenge received', challengerID => {
@@ -214,24 +371,36 @@
       if (accepted) {
         socket.emit('challenge accepted', challengerID);
         socket.emit('game start', challengerID);
+
         myMark = 'O';
+        opponent.mark = 'X';
+        opponent.id = challengerID;
+
         startGame();
       }
     });
 
     socket.on('challenge accepted', opponentID => {
-      alert(`${opponentID} aceitou seu desafio.\nIniciando partida...`);
+      alert(`${opponentID}\naceitou seu desafio.\nIniciando partida...`);
       socket.emit('game start', opponentID);
+
       myMark = 'X';
+      opponent.mark = 'O';
+      opponent.id = opponentID;
+
       startGame();
     });
 
     socket.on('my turn', opponentPlay => {
       const opponentMark = myMark == 'X' ? 'O' : 'X';
-      const coords = opponentPlay.split(' ');
-      const tile = getTile(coords[0], coords[1]);
-      drawMark(tile, opponentMark);
-      myTurn(coords);
+      const [gridCoords, tileCoords] = opponentPlay.split(' ');
+      const tile = getTile(gridCoords, tileCoords);
+
+      tile.addClass(opponentMark);
+      checkGrid(tile.parents('.grid'));
+
+      if (checkWin($('.container'), opponentMark)) endGame(false);
+      else myTurn(tileCoords);
     });
 
     socket.on('time out', () => {
@@ -240,10 +409,6 @@
     });
 
     $(document).ready(() => {
-      $('#challengeInput').focus(() => {
-        socket.emit('request all users');
-      });
-
       $('#challenge').click(() => {
         challenge($('#challengeInput').val());
       });

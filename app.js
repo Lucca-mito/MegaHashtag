@@ -9,10 +9,11 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/index.html');
 });
 
+function updateAllUsers() { io.emit('update all users', Object.keys(io.engine.clients)); }
+
 io.on('connection', socket => {
-  socket.on('request all users', () => {
-    socket.emit('update all users', Object.keys(io.engine.clients));
-  });
+  updateAllUsers();
+  socket.on('disconnect', updateAllUsers);
 
   socket.on('challenge sent', opponentID => {
     io.to(opponentID).emit('challenge received', socket.id);
@@ -33,4 +34,4 @@ io.on('connection', socket => {
   });
 });
 
-http.listen(3000, () => console.log('listening on *:3000'));
+http.listen(process.env.PORT, process.env.IP);
