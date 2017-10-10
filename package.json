@@ -15,6 +15,9 @@
     "type": "git",
     "url": "https://github.com/Lucca-mito/MegaHashtag"
   },
+  "scripts": {
+    "start": "node app.js"
+  },
   "engines": {
     "node": "6.11.2"
   }
