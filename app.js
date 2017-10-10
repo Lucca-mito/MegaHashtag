@@ -35,3 +35,4 @@ io.on('connection', socket => {
 });
 
 http.listen(process.env.PORT, process.env.IP);
+//http.listen(3000);

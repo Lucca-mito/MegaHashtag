@@ -294,7 +294,7 @@
       for (let mark of ['X', 'O'])
         if (checkWin(grid, mark)) winGrid(grid, mark);
 
-      checkDraw(grid);
+      if (checkDraw(grid)) grid.addClass('draw');
     }
 
     function tileOnClick() {
