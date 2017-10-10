@@ -25,11 +25,14 @@
         width: 135px;
       }
 
-      #turnTracker {
+      #turnTracker, #myMark {
+        font-size: 13px;
         text-align: center;
         height: 50px;
         line-height: 75px;
         margin-bottom: 5px;
+        overflow: hidden;
+        white-space: nowrap;
       }
 
       #timer {
@@ -186,8 +189,8 @@
     function showTurnTracker() {
       $('.container').prepend(`
         <div class=row>
-          <div class=col-xs-2/>
-          <div class=col-xs-8 id=turnTracker/>
+          <div class=col-xs-3 id=myMark>Você é o <b>${myMark}</b></div>
+          <div class=col-xs-7 id=turnTracker/>
           <div class=col-xs-2 id=timer data-timer=30/>
         </div>
       `);
